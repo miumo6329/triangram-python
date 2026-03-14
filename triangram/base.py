@@ -1,0 +1,28 @@
+import numpy as np
+from abc import ABC, abstractmethod
+
+from .state import TriangramState
+
+
+class BaseInitializer(ABC):
+    @abstractmethod
+    def initialize(self, target_image: np.ndarray, num_points: int) -> np.ndarray:
+        pass
+
+
+class BaseRenderer(ABC):
+    @abstractmethod
+    def render(self, state: TriangramState) -> np.ndarray:
+        pass
+
+
+class BaseEvaluator(ABC):
+    @abstractmethod
+    def evaluate(self, target_image: np.ndarray, rendered_image: np.ndarray) -> float:
+        pass
+
+
+class BaseOptimizer(ABC):
+    @abstractmethod
+    def optimize(self, state: TriangramState, renderer: BaseRenderer, evaluator: BaseEvaluator, iterations: int):
+        pass
