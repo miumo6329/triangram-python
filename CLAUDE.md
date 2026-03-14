@@ -35,7 +35,7 @@ triangram-python/
 │   ├── __init__.py
 │   ├── state.py             # TriangramState(頂点・レンダリング結果を保持)
 │   ├── base.py              # ABC定義(BaseInitializer/Renderer/Evaluator/Optimizer)
-│   ├── initializers.py      # RandomInitializer
+│   ├── initializers.py      # RandomInitializer, EdgeAwareInitializer
 │   ├── renderers.py         # DelaunayRenderer
 │   ├── evaluators.py        # MSEEvaluator
 │   ├── optimizers.py        # SimpleRandomOptimizer
@@ -58,7 +58,7 @@ triangram-python/
 -  [ ] `setup()` 未コール時のエラーメッセージが不明確 → `run()` の冒頭で明示的にチェックする
 
 ### Initializer
-- [ ] `EdgeAwareInitializer`: Cannyエッジ検出結果をもとにエッジ上に優先的に点を配置
+- [x] `EdgeAwareInitializer`: Cannyエッジ検出結果をもとにエッジ上に優先的に点を配置
 
 ### Optimizer
 - [ ] `SimulatedAnnealingOptimizer`: 焼きなまし法(確率的に悪化を許容して局所最適を脱出)

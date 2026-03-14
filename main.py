@@ -4,7 +4,7 @@ import numpy as np
 
 from triangram import (
     TriangramPipeline,
-    RandomInitializer,
+    RandomInitializer, EdgeAwareInitializer,
     DelaunayRenderer,
     MSEEvaluator,
     SimpleRandomOptimizer,
@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     # モジュールのセットアップ
     pipeline.setup(
-        init=RandomInitializer(),
+        init=EdgeAwareInitializer(edge_ratio=0.5, canny_low=50, canny_high=150),
         renderer=DelaunayRenderer(),
         eval=MSEEvaluator(),
     )
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # 最適化フェーズの追加
     pipeline.add_optimizer(SimpleRandomOptimizer(step=50), iterations=500)
     pipeline.add_optimizer(SimpleRandomOptimizer(step=25), iterations=500)
-    pipeline.add_optimizer(SimpleRandomOptimizer(step=5), iterations=500)
+    # pipeline.add_optimizer(SimpleRandomOptimizer(step=5), iterations=500)
 
     # 実行
     pipeline.run(num_points=200)
