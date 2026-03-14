@@ -14,6 +14,7 @@ class TriangramPipeline:
 
         # 処理を軽くするためリサイズ
         h, w = img.shape[:2]
+        self.original_size = (w, h)  # cv2.resize 用 (width, height)
         if w > max_width:
             scale = max_width / w
             img = cv2.resize(img, (int(w * scale), int(h * scale)))
@@ -55,5 +56,11 @@ class TriangramPipeline:
             current_loss = self.evaluator.evaluate(self.target_image, self.state.current_render)
             print(f"   Phase {idx+1} Completed. Loss: {current_loss:.2f}")
             cv2.imwrite(os.path.join(output_dir, f"{idx+1:02d}_phase_completed.png"), self.state.current_render)
+
+        print("4. Saving result...")
+        proc_w = self.target_image.shape[1]
+        result_scale = self.original_size[0] / proc_w
+        result = self.renderer.render(self.state, scale=result_scale, supersample=2)
+        cv2.imwrite(os.path.join(output_dir, "result.png"), result)
 
         print("Pipeline Finished! Check the output directory.")

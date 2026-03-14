@@ -52,8 +52,11 @@ triangram-python/
 ## TODO
 
 ### Bug Fix
-- [ ] `DelaunayRenderer`: `float → int32` 切り捨てによる隣接三角形間ギャップの解消
+- [x] `DelaunayRenderer`: `float → int32` 切り捨てによる隣接三角形間ギャップの解消
   - `triangle_pts.astype(np.int32)` を `np.round(...).astype(np.int32)` に変更
+- [x] `DelaunayRenderer`: `LINE_AA` による隣接三角形間の黒い継ぎ目の解消
+  - `LINE_AA` はエッジを黒背景とブレンドするため継ぎ目が生じる → `LINE_8` に変更
+  - ジャギーはスーパーサンプリング (`supersample` パラメータ) で対処
 -  [ ] `pipeline.target_image` と `state.target_image` が重複している → `self.state.target_image` に統一して前者を削除する
 -  [ ] `setup()` 未コール時のエラーメッセージが不明確 → `run()` の冒頭で明示的にチェックする
 
