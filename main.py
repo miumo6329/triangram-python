@@ -8,11 +8,13 @@ from triangram import (
     DelaunayRenderer,
     MSEEvaluator,
     SimpleRandomOptimizer,
+    AnimationRecorder,
 )
 
 
 if __name__ == "__main__":
-    INPUT_IMAGE = r"input_images\sample.jpg"
+    # INPUT_IMAGE = r"input_images\sample.jpg"
+    INPUT_IMAGE = r"input_images\icon.png"
     OUTPUT_DIR = r"output_images"
 
     # テスト用画像がなければ作成
@@ -39,6 +41,7 @@ if __name__ == "__main__":
         # init=RandomInitializer(debug_dir=OUTPUT_DIR),
         renderer=DelaunayRenderer(),
         eval=MSEEvaluator(),
+        recorder=AnimationRecorder(interval=10, fps=20, formats=["gif", "mp4"]),
     )
 
     # 最適化フェーズの追加

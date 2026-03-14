@@ -22,7 +22,24 @@ class BaseEvaluator(ABC):
         pass
 
 
+class BaseRecorder(ABC):
+    @abstractmethod
+    def on_step(self, render: np.ndarray) -> None:
+        pass
+
+    @abstractmethod
+    def save(self, output_dir: str) -> None:
+        pass
+
+
 class BaseOptimizer(ABC):
     @abstractmethod
-    def optimize(self, state: TriangramState, renderer: BaseRenderer, evaluator: BaseEvaluator, iterations: int):
+    def optimize(
+        self,
+        state: TriangramState,
+        renderer: BaseRenderer,
+        evaluator: BaseEvaluator,
+        iterations: int,
+        on_step: callable = None,
+    ):
         pass

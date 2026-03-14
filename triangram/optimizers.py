@@ -12,7 +12,7 @@ class SimpleRandomOptimizer(BaseOptimizer):
     def __init__(self, step: int = 25):
         self.step = step
 
-    def optimize(self, state: TriangramState, renderer: BaseRenderer, evaluator: BaseEvaluator, iterations: int):
+    def optimize(self, state: TriangramState, renderer: BaseRenderer, evaluator: BaseEvaluator, iterations: int, on_step: callable = None):
         h, w = state.target_image.shape[:2]
         current_loss = evaluator.evaluate(state.target_image, state.current_render)
 
@@ -41,6 +41,9 @@ class SimpleRandomOptimizer(BaseOptimizer):
                 improved_count += 1
             else:
                 state.points[idx] = original_pt
+
+            if on_step is not None:
+                on_step(state.current_render)
 
             if (i + 1) % 10 == 0:
                 print(f"      Step {i+1}/{iterations} | Current Loss: {current_loss:.2f}")

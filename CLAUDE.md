@@ -34,11 +34,12 @@ triangram-python/
 ├── triangram/
 │   ├── __init__.py
 │   ├── state.py             # TriangramState(頂点・レンダリング結果を保持)
-│   ├── base.py              # ABC定義(BaseInitializer/Renderer/Evaluator/Optimizer)
+│   ├── base.py              # ABC定義(BaseInitializer/Renderer/Evaluator/Optimizer/Recorder)
 │   ├── initializers.py      # RandomInitializer, EdgeAwareInitializer
 │   ├── renderers.py         # DelaunayRenderer
 │   ├── evaluators.py        # MSEEvaluator
 │   ├── optimizers.py        # SimpleRandomOptimizer
+│   ├── recorders.py         # AnimationRecorder
 │   └── pipeline.py          # TriangramPipeline
 └── pyproject.toml
 ```
@@ -75,4 +76,4 @@ triangram-python/
 - [ ] 差分再描画: 変更頂点に隣接する三角形のみ再描画して高速化
 
 ### Output
-- [ ] 最適化過程をGIF/動画として書き出す
+- [x] 最適化過程をGIF/動画として書き出す

@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 from .state import TriangramState
-from .base import BaseInitializer, BaseRenderer, BaseEvaluator, BaseOptimizer
+from .base import BaseInitializer, BaseRenderer, BaseEvaluator, BaseOptimizer, BaseRecorder
 
 
 class TriangramPipeline:
@@ -24,12 +24,20 @@ class TriangramPipeline:
         self.initializer: BaseInitializer = None
         self.renderer: BaseRenderer = None
         self.evaluator: BaseEvaluator = None
+        self.recorder: BaseRecorder = None
         self.optimizers: list[tuple[BaseOptimizer, int]] = []
 
-    def setup(self, init: BaseInitializer, renderer: BaseRenderer, eval: BaseEvaluator):
+    def setup(
+        self,
+        init: BaseInitializer,
+        renderer: BaseRenderer,
+        eval: BaseEvaluator,
+        recorder: BaseRecorder = None,
+    ):
         self.initializer = init
         self.renderer = renderer
         self.evaluator = eval
+        self.recorder = recorder
 
     def add_optimizer(self, optimizer: BaseOptimizer, iterations: int):
         self.optimizers.append((optimizer, iterations))
@@ -49,11 +57,15 @@ class TriangramPipeline:
         print(f"   Initial Loss: {initial_loss:.2f}")
         cv2.imwrite(os.path.join(output_dir, "00_initial.png"), self.state.current_render)
 
+        if self.recorder is not None:
+            self.recorder.on_step(self.state.current_render)
+
         print("3. Starting Optimization Pipeline...")
         for idx, (optimizer, iters) in enumerate(self.optimizers):
             print(f"--- Phase {idx+1}: {optimizer.__class__.__name__} ({iters} iters) ---")
 
-            optimizer.optimize(self.state, self.renderer, self.evaluator, iters)
+            on_step = self.recorder.on_step if self.recorder is not None else None
+            optimizer.optimize(self.state, self.renderer, self.evaluator, iters, on_step=on_step)
 
             current_loss = self.evaluator.evaluate(self.state.target_image, self.state.current_render)
             print(f"   Phase {idx+1} Completed. Loss: {current_loss:.2f}")
@@ -64,5 +76,8 @@ class TriangramPipeline:
         result_scale = self.original_size[0] / proc_w
         result = self.renderer.render(self.state, scale=result_scale, supersample=2)
         cv2.imwrite(os.path.join(output_dir, "result.png"), result)
+
+        if self.recorder is not None:
+            self.recorder.save(output_dir)
 
         print("Pipeline Finished! Check the output directory.")
