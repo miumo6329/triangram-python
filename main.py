@@ -13,6 +13,7 @@ from triangram import (
 
 if __name__ == "__main__":
     INPUT_IMAGE = r"input_images\sample.jpg"
+    OUTPUT_DIR = r"output_images"
 
     # テスト用画像がなければ作成
     if not os.path.exists(INPUT_IMAGE):
@@ -27,7 +28,15 @@ if __name__ == "__main__":
 
     # モジュールのセットアップ
     pipeline.setup(
-        init=EdgeAwareInitializer(edge_ratio=0.5, canny_low=50, canny_high=150),
+        init=EdgeAwareInitializer(
+            edge_ratio=0.4,
+            canny_low=50,
+            canny_high=250,
+            bilateral_d=9,
+            bilateral_sigma=75,
+            debug_dir=OUTPUT_DIR
+        ),
+        # init=RandomInitializer(debug_dir=OUTPUT_DIR),
         renderer=DelaunayRenderer(),
         eval=MSEEvaluator(),
     )
@@ -38,4 +47,4 @@ if __name__ == "__main__":
     # pipeline.add_optimizer(SimpleRandomOptimizer(step=5), iterations=500)
 
     # 実行
-    pipeline.run(num_points=200)
+    pipeline.run(num_points=200, output_dir=OUTPUT_DIR)
