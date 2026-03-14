@@ -19,8 +19,7 @@ class TriangramPipeline:
             scale = max_width / w
             img = cv2.resize(img, (int(w * scale), int(h * scale)))
 
-        self.target_image = img
-        self.state = TriangramState(self.target_image)
+        self.state = TriangramState(img)
 
         self.initializer: BaseInitializer = None
         self.renderer: BaseRenderer = None
@@ -36,14 +35,17 @@ class TriangramPipeline:
         self.optimizers.append((optimizer, iterations))
 
     def run(self, num_points: int, output_dir: str = "output_images"):
+        if self.initializer is None or self.renderer is None or self.evaluator is None:
+            raise RuntimeError("setup() must be called before run()")
+
         os.makedirs(output_dir, exist_ok=True)
 
         print("1. Initialization...")
-        self.state.points = self.initializer.initialize(self.target_image, num_points)
+        self.state.points = self.initializer.initialize(self.state.target_image, num_points)
 
         print("2. Initial Rendering...")
         self.state.current_render = self.renderer.render(self.state)
-        initial_loss = self.evaluator.evaluate(self.target_image, self.state.current_render)
+        initial_loss = self.evaluator.evaluate(self.state.target_image, self.state.current_render)
         print(f"   Initial Loss: {initial_loss:.2f}")
         cv2.imwrite(os.path.join(output_dir, "00_initial.png"), self.state.current_render)
 
@@ -53,12 +55,12 @@ class TriangramPipeline:
 
             optimizer.optimize(self.state, self.renderer, self.evaluator, iters)
 
-            current_loss = self.evaluator.evaluate(self.target_image, self.state.current_render)
+            current_loss = self.evaluator.evaluate(self.state.target_image, self.state.current_render)
             print(f"   Phase {idx+1} Completed. Loss: {current_loss:.2f}")
             cv2.imwrite(os.path.join(output_dir, f"{idx+1:02d}_phase_completed.png"), self.state.current_render)
 
         print("4. Saving result...")
-        proc_w = self.target_image.shape[1]
+        proc_w = self.state.target_image.shape[1]
         result_scale = self.original_size[0] / proc_w
         result = self.renderer.render(self.state, scale=result_scale, supersample=2)
         cv2.imwrite(os.path.join(output_dir, "result.png"), result)
