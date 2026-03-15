@@ -7,14 +7,13 @@ from triangram import (
     RandomInitializer, EdgeAwareInitializer,
     DelaunayRenderer,
     MSEEvaluator,
-    SimpleRandomOptimizer,
+    SimpleRandomOptimizer, SimulatedAnnealingOptimizer,
     AnimationRecorder,
 )
 
 
 if __name__ == "__main__":
-    # INPUT_IMAGE = r"input_images\sample.jpg"
-    INPUT_IMAGE = r"input_images\icon.png"
+    INPUT_IMAGE = r"input_images\sample.jpg"
     OUTPUT_DIR = r"output_images"
 
     # テスト用画像がなければ作成
@@ -31,7 +30,7 @@ if __name__ == "__main__":
     # モジュールのセットアップ
     pipeline.setup(
         init=EdgeAwareInitializer(
-            edge_ratio=0.4,
+            edge_ratio=0.6,
             canny_low=50,
             canny_high=250,
             bilateral_d=9,
@@ -45,9 +44,10 @@ if __name__ == "__main__":
     )
 
     # 最適化フェーズの追加
-    pipeline.add_optimizer(SimpleRandomOptimizer(step=50), iterations=500)
-    pipeline.add_optimizer(SimpleRandomOptimizer(step=25), iterations=500)
-    # pipeline.add_optimizer(SimpleRandomOptimizer(step=5), iterations=500)
+    # pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=50, initial_temp=100.0, final_temp=10.0), iterations=1000)
+    pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=25, initial_temp=30.0, final_temp=3.0), iterations=1000)
+    pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=10, initial_temp=5.0, final_temp=0.5), iterations=1000)
+    pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=5,  initial_temp=1.0, final_temp=0.01), iterations=500)
 
     # 実行
-    pipeline.run(num_points=200, output_dir=OUTPUT_DIR)
+    pipeline.run(num_points=400, output_dir=OUTPUT_DIR)
