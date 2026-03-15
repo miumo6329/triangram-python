@@ -6,7 +6,7 @@ from triangram import (
     TriangramPipeline,
     RandomInitializer, EdgeAwareInitializer,
     DelaunayRenderer,
-    MSEEvaluator,
+    MSEEvaluator, SSIMEvaluator, WeightedEvaluator,
     SimpleRandomOptimizer, SimulatedAnnealingOptimizer,
     AnimationRecorder,
 )
@@ -29,25 +29,27 @@ if __name__ == "__main__":
 
     # モジュールのセットアップ
     pipeline.setup(
-        init=EdgeAwareInitializer(
-            edge_ratio=0.6,
-            canny_low=50,
-            canny_high=250,
-            bilateral_d=9,
-            bilateral_sigma=75,
-            debug_dir=OUTPUT_DIR
-        ),
-        # init=RandomInitializer(debug_dir=OUTPUT_DIR),
+        # init=EdgeAwareInitializer(
+        #     edge_ratio=0.6,
+        #     canny_low=50,
+        #     canny_high=250,
+        #     bilateral_d=9,
+        #     bilateral_sigma=75,
+        #     debug_dir=OUTPUT_DIR
+        # ),
+        init=RandomInitializer(debug_dir=OUTPUT_DIR),
         renderer=DelaunayRenderer(),
-        eval=MSEEvaluator(),
+        eval=WeightedEvaluator([
+            (MSEEvaluator(),  0.2),
+            (SSIMEvaluator(), 0.8),
+        ]),
         recorder=AnimationRecorder(interval=10, fps=20, formats=["gif", "mp4"]),
     )
 
-    # 最適化フェーズの追加
-    # pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=50, initial_temp=100.0, final_temp=10.0), iterations=1000)
-    pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=25, initial_temp=30.0, final_temp=3.0), iterations=1000)
-    pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=10, initial_temp=5.0, final_temp=0.5), iterations=1000)
-    pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=5,  initial_temp=1.0, final_temp=0.01), iterations=500)
+    # 最適化フェーズ
+    pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=25), iterations=1000)
+    pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=10), iterations=1000)
+    pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=5),  iterations=500)
 
     # 実行
     pipeline.run(num_points=400, output_dir=OUTPUT_DIR)

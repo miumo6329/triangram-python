@@ -37,7 +37,7 @@ triangram-python/
 │   ├── base.py              # ABC定義(BaseInitializer/Renderer/Evaluator/Optimizer/Recorder)
 │   ├── initializers.py      # RandomInitializer, EdgeAwareInitializer
 │   ├── renderers.py         # DelaunayRenderer
-│   ├── evaluators.py        # MSEEvaluator
+│   ├── evaluators.py        # MSEEvaluator, SSIMEvaluator, WeightedEvaluator
 │   ├── optimizers.py        # SimpleRandomOptimizer
 │   ├── recorders.py         # AnimationRecorder
 │   └── pipeline.py          # TriangramPipeline
@@ -65,12 +65,12 @@ triangram-python/
 - [x] `EdgeAwareInitializer`: Cannyエッジ検出結果をもとにエッジ上に優先的に点を配置
 
 ### Optimizer
-- [ ] `SimulatedAnnealingOptimizer`: 焼きなまし法(確率的に悪化を許容して局所最適を脱出)
+- [x] `SimulatedAnnealingOptimizer`: 焼きなまし法(確率的に悪化を許容して局所最適を脱出)
 - [ ] 最適化中の点の追加・削除(点数自体を変化させる)
 
 ### Evaluator
-- [ ] `SSIMEvaluator`: 構造的類似度(SSIM)ベースの評価
-- [ ] `WeightedEvaluator`: 複数Evaluatorの加重合成
+- [x] `SSIMEvaluator`: 構造的類似度(SSIM)ベースの評価
+- [x] `WeightedEvaluator`: 複数Evaluatorの加重合成
 
 ### Performance
 - [ ] 差分再描画: 変更頂点に隣接する三角形のみ再描画して高速化

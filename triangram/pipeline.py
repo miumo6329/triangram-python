@@ -54,7 +54,7 @@ class TriangramPipeline:
         print("2. Initial Rendering...")
         self.state.current_render = self.renderer.render(self.state)
         initial_loss = self.evaluator.evaluate(self.state.target_image, self.state.current_render)
-        print(f"   Initial Loss: {initial_loss:.2f}")
+        print(f"   Initial Loss: {initial_loss:.5f}")
         cv2.imwrite(os.path.join(output_dir, "00_initial.png"), self.state.current_render)
 
         if self.recorder is not None:
