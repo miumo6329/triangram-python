@@ -3,6 +3,6 @@ from .base import BaseInitializer, BaseRenderer, BaseEvaluator, BaseOptimizer, B
 from .initializers import RandomInitializer, EdgeAwareInitializer
 from .renderers import DelaunayRenderer
 from .evaluators import MSEEvaluator, SSIMEvaluator, WeightedEvaluator
-from .optimizers import SimpleRandomOptimizer, SimulatedAnnealingOptimizer
+from .optimizers import SimpleRandomOptimizer, SimulatedAnnealingOptimizer, AdaptiveRefiner
 from .recorders import AnimationRecorder
 from .pipeline import TriangramPipeline

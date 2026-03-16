@@ -66,7 +66,12 @@ triangram-python/
 
 ### Optimizer
 - [x] `SimulatedAnnealingOptimizer`: 焼きなまし法(確率的に悪化を許容して局所最適を脱出)
-- [ ] 最適化中の点の追加・削除(点数自体を変化させる)
+- [x] `AdaptiveRefiner`: 誤差駆動の適応的点追加・削除
+  - Split: 誤差加重値 (MSE × 三角形面積) が最大の三角形の重心に点を追加
+  - Merge: 周辺三角形の誤差合計が最小の点を削除
+- [ ] `AdaptiveRefiner` のハイブリッド戦略: 幾何学的基準との組み合わせ
+  - 近接点統合: 最近傍点との距離が閾値以下の点を除去
+  - 疎領域への追加: 面積の大きい三角形への点追加（誤差によらない補完）
 
 ### Evaluator
 - [x] `SSIMEvaluator`: 構造的類似度(SSIM)ベースの評価

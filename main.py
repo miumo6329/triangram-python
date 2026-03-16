@@ -7,13 +7,13 @@ from triangram import (
     RandomInitializer, EdgeAwareInitializer,
     DelaunayRenderer,
     MSEEvaluator, SSIMEvaluator, WeightedEvaluator,
-    SimpleRandomOptimizer, SimulatedAnnealingOptimizer,
+    SimpleRandomOptimizer, SimulatedAnnealingOptimizer, AdaptiveRefiner,
     AnimationRecorder,
 )
 
 
 if __name__ == "__main__":
-    INPUT_IMAGE = r"input_images\sample.jpg"
+    INPUT_IMAGE = r"input_images\sample.png"
     OUTPUT_DIR = r"output_images"
 
     # テスト用画像がなければ作成
@@ -48,7 +48,9 @@ if __name__ == "__main__":
 
     # 最適化フェーズ
     pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=25), iterations=1000)
-    pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=10), iterations=1000)
+    pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=10), iterations=500)
+    pipeline.add_optimizer(AdaptiveRefiner(split_count=5, merge_count=5), iterations=10)
+    pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=15), iterations=800)
     pipeline.add_optimizer(SimulatedAnnealingOptimizer(step=5),  iterations=500)
 
     # 実行

@@ -1,6 +1,8 @@
 import math
 import random
+import cv2
 import numpy as np
+from scipy.spatial import Delaunay
 
 from .base import BaseOptimizer, BaseRenderer, BaseEvaluator
 from .state import TriangramState
@@ -105,6 +107,147 @@ class SimulatedAnnealingOptimizer(BaseOptimizer):
                 print(f"      Step {i+1}/{iterations} | Loss: {current_loss:.5f} | T: {temp:.5f}")
 
         print(f"   -> Improved: {improved_count}, Accepted worse: {accepted_worse_count}")
+
+
+class AdaptiveRefiner(BaseOptimizer):
+    """
+    誤差駆動の適応的点追加・削除。
+
+    Split: 誤差加重値 (MSE × 三角形面積) が最大の三角形の重心に点を追加する。
+    Merge: 周辺三角形の誤差合計が最小の点を削除する。
+
+    各イテレーションで split_count 回の追加 → merge_count 回の削除を行う。
+    将来的には幾何学的基準 (近接点統合・疎領域への追加) と組み合わせた
+    ハイブリッド戦略に拡張できる設計とする。
+    """
+
+    def __init__(
+        self,
+        split_count: int = 5,
+        merge_count: int = 0,
+        min_points: int = 10,
+        max_points: int = 2000,
+    ):
+        self.split_count = split_count
+        self.merge_count = merge_count
+        self.min_points = min_points
+        self.max_points = max_points
+
+    def _compute_triangle_stats(self, state: TriangramState):
+        """三角形ごとの誤差加重値・重心・点→三角形インデックスマップを返す。
+
+        誤差加重値 = 三角形内ピクセルの平均二乗誤差 × 三角形面積
+        (大きい三角形ほど・誤差が大きいほど高スコア)
+        """
+        tri = Delaunay(state.points)
+        simplices = tri.simplices  # (M, 3)
+        h, w = state.target_image.shape[:2]
+
+        # チャンネル方向の平均 MSE マップ (H, W)
+        diff_sq = np.mean(
+            (state.target_image.astype(np.float32) - state.current_render.astype(np.float32)) ** 2,
+            axis=2,
+        )
+
+        n_tri = len(simplices)
+        weighted_errors = np.zeros(n_tri)
+        centroids = np.zeros((n_tri, 2))
+
+        for i, simplex in enumerate(simplices):
+            pts = state.points[simplex]  # (3, 2): x, y
+            x0, y0 = pts[0]
+            x1, y1 = pts[1]
+            x2, y2 = pts[2]
+
+            area = abs((x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0)) / 2.0
+            centroids[i] = [(x0 + x1 + x2) / 3.0, (y0 + y1 + y2) / 3.0]
+
+            if area < 1:
+                continue
+
+            bx_min = max(0, int(min(x0, x1, x2)))
+            bx_max = min(w, int(max(x0, x1, x2)) + 1)
+            by_min = max(0, int(min(y0, y1, y2)))
+            by_max = min(h, int(max(y0, y1, y2)) + 1)
+
+            if bx_max <= bx_min or by_max <= by_min:
+                continue
+
+            cnt = pts - np.array([bx_min, by_min])
+            mask = np.zeros((by_max - by_min, bx_max - bx_min), dtype=np.uint8)
+            cv2.fillPoly(mask, [np.round(cnt).astype(np.int32)], 255)
+
+            roi = diff_sq[by_min:by_max, bx_min:bx_max]
+            pixels = mask > 0
+            if pixels.any():
+                weighted_errors[i] = roi[pixels].mean() * area
+
+        # 点 → 所属三角形インデックスのマップ (Merge で使用)
+        point_to_tris = [[] for _ in range(len(state.points))]
+        for i, simplex in enumerate(simplices):
+            for pt_idx in simplex:
+                point_to_tris[pt_idx].append(i)
+
+        return weighted_errors, centroids, point_to_tris
+
+    def _do_split(self, state: TriangramState, renderer: BaseRenderer) -> None:
+        """誤差最大の三角形の重心に1点追加する。"""
+        weighted_errors, centroids, _ = self._compute_triangle_stats(state)
+        best = int(np.argmax(weighted_errors))
+        state.points = np.vstack([state.points, centroids[best]])
+        state.current_render = renderer.render(state)
+
+    def _do_merge(self, state: TriangramState, renderer: BaseRenderer) -> None:
+        """周辺誤差合計が最小の点を1つ削除する。四隅 (idx 0–3) は除外。"""
+        weighted_errors, _, point_to_tris = self._compute_triangle_stats(state)
+        movable = np.arange(4, len(state.points))
+        neighborhood_errors = np.array([
+            sum(weighted_errors[t] for t in point_to_tris[i])
+            for i in movable
+        ])
+        candidate_idx = movable[int(np.argmin(neighborhood_errors))]
+        state.points = np.delete(state.points, candidate_idx, axis=0)
+        state.current_render = renderer.render(state)
+
+    def optimize(
+        self,
+        state: TriangramState,
+        renderer: BaseRenderer,
+        evaluator: BaseEvaluator,
+        iterations: int,
+        on_step: callable = None,
+    ):
+        added_total = 0
+        removed_total = 0
+
+        for i in range(iterations):
+            added_this = 0
+            removed_this = 0
+
+            # Split: 誤差最大の三角形に点を追加
+            for _ in range(self.split_count):
+                if len(state.points) >= self.max_points:
+                    break
+                self._do_split(state, renderer)
+                added_this += 1
+                if on_step:
+                    on_step(state.current_render)
+
+            # Merge: 周辺誤差最小の点を削除
+            for _ in range(self.merge_count):
+                if len(state.points) - 4 <= self.min_points:
+                    break
+                self._do_merge(state, renderer)
+                removed_this += 1
+                if on_step:
+                    on_step(state.current_render)
+
+            added_total += added_this
+            removed_total += removed_this
+            current_loss = evaluator.evaluate(state.target_image, state.current_render)
+            print(f"      Iter {i+1}/{iterations} | Points: {len(state.points)} (+{added_this}/-{removed_this}) | Loss: {current_loss:.5f}")
+
+        print(f"   -> Total: +{added_total} split, -{removed_total} merged. Final points: {len(state.points)}")
 
 
 class SimpleRandomOptimizer(BaseOptimizer):
