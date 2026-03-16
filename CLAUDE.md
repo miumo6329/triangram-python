@@ -72,6 +72,7 @@ triangram-python/
 - [ ] `AdaptiveRefiner` のハイブリッド戦略: 幾何学的基準との組み合わせ
   - 近接点統合: 最近傍点との距離が閾値以下の点を除去
   - 疎領域への追加: 面積の大きい三角形への点追加（誤差によらない補完）
+- [ ] 収束判定によるEarly Stopping: 直近Nステップでベストが更新されなければ早期終了 (`iterations` を上限として扱う)
 
 ### Evaluator
 - [x] `SSIMEvaluator`: 構造的類似度(SSIM)ベースの評価
