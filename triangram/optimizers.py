@@ -2,7 +2,7 @@ import math
 import random
 import cv2
 import numpy as np
-from scipy.spatial import Delaunay
+from scipy.spatial import Delaunay, cKDTree
 
 from .base import BaseOptimizer, BaseRenderer, BaseEvaluator
 from .state import TriangramState
@@ -248,6 +248,128 @@ class AdaptiveRefiner(BaseOptimizer):
             print(f"      Iter {i+1}/{iterations} | Points: {len(state.points)} (+{added_this}/-{removed_this}) | Loss: {current_loss:.5f}")
 
         print(f"   -> Total: +{added_total} split, -{removed_total} merged. Final points: {len(state.points)}")
+
+
+class ProximityMerger(BaseOptimizer):
+    """
+    幾何学的基準による近接点統合。
+
+    最近傍点との距離が proximity_threshold 以下の点を除去する。
+    近接ペアのうち、周辺三角形の誤差合計が小さい方（貢献度が低い方）を削除する。
+    四隅 (idx 0–3) は除外。削除対象がなくなれば早期終了。
+    """
+
+    def __init__(
+        self,
+        proximity_threshold: float = 5.0,
+        min_points: int = 10,
+    ):
+        self.proximity_threshold = proximity_threshold
+        self.min_points = min_points
+
+    def _compute_neighborhood_errors(self, state: TriangramState):
+        """点ごとの周辺三角形の誤差合計を返す。"""
+        tri = Delaunay(state.points)
+        simplices = tri.simplices
+        h, w = state.target_image.shape[:2]
+
+        diff_sq = np.mean(
+            (state.target_image.astype(np.float32) - state.current_render.astype(np.float32)) ** 2,
+            axis=2,
+        )
+
+        n_tri = len(simplices)
+        triangle_errors = np.zeros(n_tri)
+
+        for i, simplex in enumerate(simplices):
+            pts = state.points[simplex]
+            x0, y0 = pts[0]; x1, y1 = pts[1]; x2, y2 = pts[2]
+            area = abs((x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0)) / 2.0
+            if area < 1:
+                continue
+            bx_min = max(0, int(min(x0, x1, x2)))
+            bx_max = min(w, int(max(x0, x1, x2)) + 1)
+            by_min = max(0, int(min(y0, y1, y2)))
+            by_max = min(h, int(max(y0, y1, y2)) + 1)
+            if bx_max <= bx_min or by_max <= by_min:
+                continue
+            cnt = pts - np.array([bx_min, by_min])
+            mask = np.zeros((by_max - by_min, bx_max - bx_min), dtype=np.uint8)
+            cv2.fillPoly(mask, [np.round(cnt).astype(np.int32)], 255)
+            roi = diff_sq[by_min:by_max, bx_min:bx_max]
+            pixels = mask > 0
+            if pixels.any():
+                triangle_errors[i] = roi[pixels].mean() * area
+
+        point_to_tris = [[] for _ in range(len(state.points))]
+        for i, simplex in enumerate(simplices):
+            for pt_idx in simplex:
+                point_to_tris[pt_idx].append(i)
+
+        neighborhood_errors = np.array([
+            sum(triangle_errors[t] for t in point_to_tris[i])
+            for i in range(len(state.points))
+        ])
+        return neighborhood_errors
+
+    def _do_proximity_merge(self, state: TriangramState, renderer: BaseRenderer) -> bool:
+        """近接ペアを1組見つけ、貢献度の低い方を削除する。削除できた場合 True を返す。"""
+        movable = np.arange(4, len(state.points))
+        if len(movable) < 2:
+            return False
+
+        movable_pts = state.points[movable]
+        tree = cKDTree(movable_pts)
+        # 自分自身を除いた最近傍 (k=2 の 2番目)
+        dists, idxs = tree.query(movable_pts, k=2)
+        nearest_dists = dists[:, 1]  # (n_movable,)
+
+        # 閾値以下のペアのうち最も近いものを選ぶ
+        candidates = np.where(nearest_dists <= self.proximity_threshold)[0]
+        if len(candidates) == 0:
+            return False
+
+        # 最近傍距離が最小のペアを選択
+        closest_local = candidates[int(np.argmin(nearest_dists[candidates]))]
+        pt_a = int(movable[closest_local])
+        pt_b = int(movable[idxs[closest_local, 1]])
+
+        # 周辺誤差合計が小さい方を削除
+        neighborhood_errors = self._compute_neighborhood_errors(state)
+        remove_idx = pt_a if neighborhood_errors[pt_a] <= neighborhood_errors[pt_b] else pt_b
+
+        state.points = np.delete(state.points, remove_idx, axis=0)
+        state.current_render = renderer.render(state)
+        return True
+
+    def optimize(
+        self,
+        state: TriangramState,
+        renderer: BaseRenderer,
+        evaluator: BaseEvaluator,
+        iterations: int,
+        on_step: callable = None,
+    ):
+        removed_total = 0
+
+        for i in range(iterations):
+            if len(state.points) - 4 <= self.min_points:
+                print(f"      Iter {i+1}/{iterations} | min_points reached, stopping.")
+                break
+
+            removed = self._do_proximity_merge(state, renderer)
+            if not removed:
+                print(f"      Iter {i+1}/{iterations} | No proximate pairs found (threshold={self.proximity_threshold}), stopping.")
+                break
+
+            removed_total += 1
+            if on_step:
+                on_step(state.current_render)
+
+            current_loss = evaluator.evaluate(state.target_image, state.current_render)
+            print(f"      Iter {i+1}/{iterations} | Points: {len(state.points)} (-1) | Loss: {current_loss:.5f}")
+
+        print(f"   -> Total: -{removed_total} proximity merged. Final points: {len(state.points)}")
 
 
 class SimpleRandomOptimizer(BaseOptimizer):

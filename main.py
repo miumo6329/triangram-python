@@ -7,7 +7,8 @@ from triangram import (
     RandomInitializer, EdgeAwareInitializer,
     DelaunayRenderer,
     MSEEvaluator, SSIMEvaluator, WeightedEvaluator,
-    SimpleRandomOptimizer, SimulatedAnnealingOptimizer, AdaptiveRefiner,
+    SimpleRandomOptimizer, SimulatedAnnealingOptimizer,
+    AdaptiveRefiner, ProximityMerger,
     AnimationRecorder,
 )
 
