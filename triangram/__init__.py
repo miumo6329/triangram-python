@@ -6,3 +6,5 @@ from .evaluators import MSEEvaluator, SSIMEvaluator, WeightedEvaluator
 from .optimizers import SimpleRandomOptimizer, SimulatedAnnealingOptimizer, AdaptiveRefiner, ProximityMerger
 from .recorders import AnimationRecorder
 from .pipeline import TriangramPipeline
+from .trgm import save, load_state
+from . import trgm

@@ -40,6 +40,7 @@ triangram-python/
 │   ├── evaluators.py        # MSEEvaluator, SSIMEvaluator, WeightedEvaluator
 │   ├── optimizers.py        # SimpleRandomOptimizer
 │   ├── recorders.py         # AnimationRecorder
+│   ├── trgm.py              # .trgmファイルの保存・読み込み・レンダリング
 │   └── pipeline.py          # TriangramPipeline
 └── pyproject.toml
 ```
@@ -83,3 +84,38 @@ triangram-python/
 
 ### Output
 - [x] 最適化過程をGIF/動画として書き出す
+- [x] `.trgm` フォーマットで保存・復元できるようにする
+- [ ] `trgm.render()` にスーパーサンプリング対応を追加（`DelaunayRenderer` と同様に `supersample` パラメータ）: `trgm2img.py` の `--scale` とは独立して指定できるようにする
+
+## .trgmフォーマット
+
+Triangramの作品データを軽量なJSONで保存するフォーマット。ブラウザエディターとの連携を想定。
+
+```json
+{
+  "version": "1.0",
+  "canvas": {"width": 800, "height": 600},
+  "vertices": [[0.123, 0.456], ...],
+  "triangles": [[0, 1, 2], ...],
+  "colors": [[255, 128, 0], ...]
+}
+```
+
+- `vertices`: 正規化座標 (0.0〜1.0)。解像度非依存
+- `triangles`: ドロネー分割で生成された三角形の頂点インデックス3つ組
+- `colors`: 各三角形のRGB色。元画像の対応領域の平均色
+
+頂点インデックスを明示的に保持することで、Python (scipy) とブラウザ (JS) で実装が異なっても確実に同じメッシュを再現できる。
+
+### Python API
+
+```python
+from triangram import save, load_state
+from triangram import trgm
+
+save("result.trgm", state)                         # 保存
+state = load_state("result.trgm", target_image)    # 復元（最適化再開用）
+image = trgm.render("result.trgm", scale=2.0)      # 画像としてレンダリング（BGR ndarray）
+```
+
+パイプライン実行時は `output_images/result.trgm` に自動保存される。

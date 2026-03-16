@@ -4,6 +4,7 @@ import numpy as np
 
 from .state import TriangramState
 from .base import BaseInitializer, BaseRenderer, BaseEvaluator, BaseOptimizer, BaseRecorder
+from . import trgm
 
 
 class TriangramPipeline:
@@ -76,6 +77,7 @@ class TriangramPipeline:
         result_scale = self.original_size[0] / proc_w
         result = self.renderer.render(self.state, scale=result_scale, supersample=2)
         cv2.imwrite(os.path.join(output_dir, "result.png"), result)
+        trgm.save(os.path.join(output_dir, "result.trgm"), self.state)
 
         if self.recorder is not None:
             self.recorder.save(output_dir)
